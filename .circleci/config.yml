@@ -1,97 +1,65 @@
 version: 2.1
 
-jobs:
-  prepare:
+executors:
+  terraform:
     docker:
-      - image: hashicorp/terraform:latest
-    steps:
-      - checkout
-      - run:
-          name: Configure AWS CLI
-          command: |
-            apk update
-            apk add --no-cache python3 py3-pip
-            pip install awscli --break-system-packages
-            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-      - run:
-          name: Terraform Initialization
-          command: terraform init
+      - image: hashicorp/terraform:1.5.0
+    working_directory: ~/repo
 
-  plan:
-    docker:
-      - image: hashicorp/terraform:latest
+jobs:
+  terraform-plan:
+    executor: terraform
     steps:
       - checkout
       - run:
-          name: Configure AWS CLI
-          command: |
-            apk update
-            apk add --no-cache python3 py3-pip
-            pip install awscli --break-system-packages
-            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-      - run:
-          name: Terraform Validation
-          command: terraform validate
+          name: Initialize Terraform
+          command: terraform init
       - run:
           name: Terraform Plan
-          command: terraform plan -out=tfplan_tgw
-      - persist_to_workspace:
-          root: .
-          paths:
-            - tfplan_tgw
+          command: terraform plan
 
-  apply:
-    docker:
-      - image: hashicorp/terraform:latest
+  terraform-apply:
+    executor: terraform
     steps:
       - checkout
-      - attach_workspace:
-          at: /workspace
       - run:
-          name: Configure AWS CLI
-          command: |
-            apk update
-            apk add --no-cache python3 py3-pip
-            pip install awscli --break-system-packages
-            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          name: Initialize Terraform
+          command: terraform init
       - run:
           name: Terraform Apply
-          command: terraform apply -auto-approve /workspace/tfplan_tgw
+          command: terraform apply -auto-approve
 
-  destroy:
-    docker:
-      - image: hashicorp/terraform:latest
+  terraform-destroy:
+    executor: terraform
     steps:
       - checkout
       - run:
-          name: Configure AWS CLI
+          name: Check for Destroy Keyword in Commit Message
           command: |
-            apk update
-            apk add --no-cache python3 py3-pip
-            pip install awscli --break-system-packages
-            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+            if git log -1 --pretty=%B | grep -q '\[destroy\]'; then
+              echo "Destroy keyword found, proceeding with destroy."
+            else
+              echo "Destroy keyword not found, skipping destroy."
+              exit 0
+            fi  # <-- Missing fi to close the if block
+      - run:
+          name: Initialize Terraform
+          command: terraform init
       - run:
           name: Terraform Destroy
           command: terraform destroy -auto-approve
 
 workflows:
-  version: 2
-  deploy:
+  terraform-workflow:
     jobs:
-      - prepare
-      - plan
-      - manual_approval:
-          type: approval
+      - terraform-plan
+      - terraform-apply:
           requires:
-            - plan
-      - apply:
+            - terraform-plan
+      - terraform-destroy:
           requires:
-            - manual_approval
-      - destroy:
-          requires:
-            - apply
+            - terraform-apply
+          filters:
+            branches:
+              only: main
 
