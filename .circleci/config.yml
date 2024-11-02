@@ -16,8 +16,13 @@ jobs:
           command: terraform init
       - run:
           name: Terraform Plan
-          command: terraform plan
-
+          command: terraform plan -out=tfplan
+      - run:
+          name: Review Plan Output
+          command: |
+            terraform show -json tfplan | jq '.resource_changes[] | {type: .type, name: .name, change: .change}' > plan_output.json
+            cat plan_output.json  # Display the output in the console
+          
   approve-apply:
     type: approval
 
@@ -65,5 +70,3 @@ workflows:
           filters:
             branches:
               only: main
-
-
