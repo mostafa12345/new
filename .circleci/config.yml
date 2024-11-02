@@ -89,7 +89,9 @@ workflows:
           requires:
             - plan
       - apply:
-          
-
-
+          requires:
+            - manual_approval
+      - destroy:
+          requires:
+            - apply
 
