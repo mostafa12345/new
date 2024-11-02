@@ -1,0 +1,68 @@
+version: 2.1
+
+jobs:
+  prepare:
+    docker:
+      - image: hashicorp/terraform:latest
+    steps:
+      - checkout
+      - run:
+          name: Install AWS CLI
+          command: |
+            apt-get update
+            apt-get install -y awscli
+      - run:
+          name: Terraform Initialization
+          command: terraform init
+
+  plan:
+    docker:
+      - image: hashicorp/terraform:latest
+    steps:
+      - checkout
+      - run:
+          name: Terraform Validation
+          command: terraform validate
+      - run:
+          name: Terraform Plan
+          command: terraform plan -out=tfplan_tgw
+      - persist_to_workspace:
+          root: .
+          paths:
+            - tfplan_tgw
+
+  apply:
+    docker:
+      - image: hashicorp/terraform:latest
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /workspace
+      - run:
+          name: Terraform Apply
+          command: terraform apply -auto-approve /workspace/tfplan_tgw
+  destroy:
+    docker:
+      - image: hashicorp/terraform:latest
+    steps:
+      - checkout
+      - run:
+          name: Terraform Destroy
+          command: terraform destroy -auto-approve
+
+workflows:
+  version: 2
+  deploy:
+    jobs:
+      - prepare
+      - plan
+      - manual_approval:
+          type: approval
+          requires:
+            - plan
+      - apply:
+          requires:
+            - manual_approval
+      - destroy:
+          requires:
+            - manual_approval
