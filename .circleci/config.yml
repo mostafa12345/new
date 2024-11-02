@@ -7,6 +7,14 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Configure AWS CLI
+          command: |
+            apk update
+            apk add --no-cache python3 py3-pip
+            pip install awscli --break-system-packages
+            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+      - run:
           name: Terraform Initialization
           command: terraform init
 
@@ -15,6 +23,14 @@ jobs:
       - image: hashicorp/terraform:latest
     steps:
       - checkout
+      - run:
+          name: Configure AWS CLI
+          command: |
+            apk update
+            apk add --no-cache python3 py3-pip
+            pip install awscli --break-system-packages
+            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
       - run:
           name: Terraform Validation
           command: terraform validate
@@ -34,6 +50,14 @@ jobs:
       - attach_workspace:
           at: /workspace
       - run:
+          name: Configure AWS CLI
+          command: |
+            apk update
+            apk add --no-cache python3 py3-pip
+            pip install awscli --break-system-packages
+            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+      - run:
           name: Terraform Apply
           command: terraform apply -auto-approve /workspace/tfplan_tgw
 
@@ -42,6 +66,14 @@ jobs:
       - image: hashicorp/terraform:latest
     steps:
       - checkout
+      - run:
+          name: Configure AWS CLI
+          command: |
+            apk update
+            apk add --no-cache python3 py3-pip
+            pip install awscli --break-system-packages
+            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
       - run:
           name: Terraform Destroy
           command: terraform destroy -auto-approve
@@ -57,10 +89,7 @@ workflows:
           requires:
             - plan
       - apply:
-          requires:
-            - manual_approval
-      - destroy:
-          requires:
-            - manual_approval
+          
+
 
 
