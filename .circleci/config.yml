@@ -9,8 +9,9 @@ jobs:
       - run:
           name: Install AWS CLI
           command: |
-            apt-get update
-            apt-get install -y awscli
+            apk update
+            apk add --no-cache python3 py3-pip
+            pip3 install awscli
       - run:
           name: Terraform Initialization
           command: terraform init
@@ -41,6 +42,7 @@ jobs:
       - run:
           name: Terraform Apply
           command: terraform apply -auto-approve /workspace/tfplan_tgw
+
   destroy:
     docker:
       - image: hashicorp/terraform:latest
@@ -66,3 +68,4 @@ workflows:
       - destroy:
           requires:
             - manual_approval
+
