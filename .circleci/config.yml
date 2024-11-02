@@ -18,6 +18,9 @@ jobs:
           name: Terraform Plan
           command: terraform plan
 
+  approve-apply:
+    type: approval
+
   terraform-apply:
     executor: terraform
     steps:
@@ -28,6 +31,9 @@ jobs:
       - run:
           name: Terraform Apply
           command: terraform apply -auto-approve
+
+  approve-destroy:
+    type: approval
 
   terraform-destroy:
     executor: terraform
@@ -41,7 +47,7 @@ jobs:
             else
               echo "Destroy keyword not found, skipping destroy."
               exit 0
-            fi  # <-- Missing fi to close the if block
+            fi
       - run:
           name: Initialize Terraform
           command: terraform init
@@ -53,12 +59,18 @@ workflows:
   terraform-workflow:
     jobs:
       - terraform-plan
-      - terraform-apply:
+      - approve-apply:
           requires:
             - terraform-plan
-      - terraform-destroy:
+      - terraform-apply:
+          requires:
+            - approve-apply
+      - approve-destroy:
           requires:
             - terraform-apply
+      - terraform-destroy:
+          requires:
+            - approve-destroy
           filters:
             branches:
               only: main
